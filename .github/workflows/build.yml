@@ -1,7 +1,7 @@
 name: Build & Release Chrome Extension
 
 on:
-  workflow_dispatch:  # ✅ 手动触发
+  workflow_dispatch:
 
 jobs:
   build:
@@ -13,8 +13,7 @@ jobs:
       
     - name: Generate version
       id: version
-      run: |
-        echo "version=$(date +%Y%m%d)-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+      run: echo "version=$(date +%Y%m%d)-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
         
     - name: Create ZIP
       run: |
@@ -22,20 +21,27 @@ jobs:
         -x "*.git*" ".github/*" "README.md" ".gitignore" "builds/*"
         
     - name: Create Release & Upload
-      # ❌ 临时移除 if 条件，让手动触发也能发布
       uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ steps.version.outputs.version }}
         name: "🔥 Bookmark Sorter v${{ steps.version.outputs.version }}"
         body: |
-          ## 🔥 最新版 v${{ steps.version.outputs.version }}
-          
-          ✅ 递归排序所有子文件夹
-          ✅ 视觉长度排序（短的在前）
-          ✅ 书签在前，文件夹在后
-          ✅ 右键菜单 + 图标点击
-          
-          ### 📥 下载 👇
+          # 🔥 Bookmark Sorter v${{ steps.version.outputs.version }}
+
+          ## ✨ 核心功能
+          - ✅ **递归排序**所有子文件夹  
+          - ✅ **视觉长度排序**（汉字×2，英文×1，短的在前）  
+          - ✅ **书签在前**，文件夹在后  
+          - ✅ **双触发方式**：右键菜单 + 图标点击  
+
+          ## 📦 安装步骤
+          1. 下载 → 解压  
+          2. `chrome://extensions/` → 开发者模式  
+          3. **加载已解压的扩展程序** → 选择文件夹  
+          4. 任意页面**右键 → 全部书签递归排序**
+
+          ---
+          **⭐ 喜欢请点 Star 支持！**
         draft: false
         prerelease: false
         files: bookmark-sorter-v${{ steps.version.outputs.version }}.zip
