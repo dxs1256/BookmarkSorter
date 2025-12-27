@@ -26,29 +26,23 @@ jobs:
         -x "*.git*" ".github/*" "README.md" ".gitignore" "builds/*"
         
     - name: Create Release & Upload
-      if: startsWith(steps.version.outputs.version, 'v[0-9]')  # 只发布 v2.0.0、v2.1.0，不发 v20251227-xxx
+      if: !contains(steps.version.outputs.version, '-')  # 只发布 v2.0.0，不发 v20251227-xxx
       uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ steps.version.outputs.version }}
-        name: "Bookmark Sorter v${{ steps.version.outputs.version }}"
+        name: "🔥 Bookmark Sorter v${{ steps.version.outputs.version }}"
         body: |
           ## 🔥 最新稳定版 v${{ steps.version.outputs.version }}
           
           ✅ **递归所有子文件夹**排序  
-          ✅ **视觉长度排序**（汉字×2，英文×1，短的在前）  
+          ✅ **视觉长度排序**（汉字×2，英文×1）  
           ✅ **书签在前，文件夹在后**  
-          ✅ **右键菜单 + 图标点击**触发  
-          ✅ **修复Service Worker注册错误**  
+          ✅ **右键菜单 + 图标点击**  
+          ✅ **修复Service Worker错误**
           
-          ### 📥 下载
-          **bookmark-sorter-v${{ steps.version.outputs.version }}.zip** 👇
-          
-          ### 🛠️ 安装
-          1. `chrome://extensions/` → 开发者模式  
-          2. "加载已解压的扩展程序" → 选zip解压目录  
-          3. 任意页面右键 → "全部书签递归排序"
+          ### 📥 下载 👇
         draft: false
-        prerelease: false  # 永远正式版
+        prerelease: false  # 全部正式版
         files: bookmark-sorter-v${{ steps.version.outputs.version }}.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
