@@ -14,11 +14,7 @@ jobs:
     - name: Generate version
       id: version
       run: |
-        if [[ "${{ github.event_name }}" == "release" ]]; then
-          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
-        else
-          echo "version=$(date +%Y%m%d)-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
-        fi
+        echo "version=$(date +%Y%m%d)-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
         
     - name: Create ZIP
       run: |
@@ -26,19 +22,18 @@ jobs:
         -x "*.git*" ".github/*" "README.md" ".gitignore" "builds/*"
         
     - name: Create Release & Upload
-      if: "!contains(steps.version.outputs.version, '-')"
+      # ❌ 临时移除 if 条件，让手动触发也能发布
       uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ steps.version.outputs.version }}
         name: "🔥 Bookmark Sorter v${{ steps.version.outputs.version }}"
         body: |
-          ## 🔥 最新稳定版 v${{ steps.version.outputs.version }}
+          ## 🔥 最新版 v${{ steps.version.outputs.version }}
           
-          ✅ **递归所有子文件夹**排序  
-          ✅ **视觉长度排序**（汉字×2，英文×1）  
-          ✅ **书签在前，文件夹在后**  
-          ✅ **右键菜单 + 图标点击**  
-          ✅ **修复Service Worker错误**
+          ✅ 递归排序所有子文件夹
+          ✅ 视觉长度排序（短的在前）
+          ✅ 书签在前，文件夹在后
+          ✅ 右键菜单 + 图标点击
           
           ### 📥 下载 👇
         draft: false
