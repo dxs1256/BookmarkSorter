@@ -3,8 +3,6 @@ name: Build & Release Chrome Extension
 on:
   push:
     branches: [ main, master ]
-  pull_request:
-    branches: [ main, master ]
   workflow_dispatch:  # ✅ 手动触发
   release:
     types: [ published ]
@@ -17,9 +15,6 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Create build directory
-      run: mkdir builds
-      
     - name: Generate version
       id: version
       run: |
@@ -29,34 +24,27 @@ jobs:
           echo "version=$(date +%Y%m%d)-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
         fi
         
-    - name: Zip extension
+    - name: Create ZIP
       run: |
-        zip -r "builds/bookmark-sorter-v${{ steps.version.outputs.version }}.zip" . \
-        -x "*.git*" "builds/*" ".github/*" "README.md" ".gitignore"
-        
-    - name: Upload ZIP artifact
-      uses: actions/upload-artifact@v4
-      with:
-        name: bookmark-sorter-v${{ steps.version.outputs.version }}
-        path: builds/*.zip
+        zip -r "bookmark-sorter-v${{ steps.version.outputs.version }}.zip" . \
+        -x "*.git*" ".github/*" "README.md" ".gitignore" "builds/*"
         
     - name: Create Release & Upload
-      if: github.event_name == 'workflow_dispatch' || github.event_name == 'release' || github.ref == 'refs/heads/main'
       uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ steps.version.outputs.version }}
         name: "Bookmark Sorter v${{ steps.version.outputs.version }}"
         body: |
-          ## 视觉书签排序器
+          ## 🔧 视觉书签排序器
           
           ✅ 按视觉长度排序（短的在前）
-          ✅ 书签在前，文件夹在后  
+          ✅ 书签在前，文件夹在后
           ✅ 递归所有子文件夹
           ✅ 自动去空格优化
           
-          **下载：** `bookmark-sorter-v${{ steps.version.outputs.version }}.zip`
+          **下载安装包 👇**
         draft: false
         prerelease: ${{ github.event_name != 'release' }}
-        files: builds/bookmark-sorter-v${{ steps.version.outputs.version }}.zip
+        files: bookmark-sorter-v${{ steps.version.outputs.version }}.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
