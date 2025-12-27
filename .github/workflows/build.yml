@@ -11,21 +11,33 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
       
-    - name: Generate version
+    - name: Get next version
       id: version
-      run: echo "version=$(date +%Y%m%d)-${GITHUB_SHA::7}" >> $GITHUB_OUTPUT
+      run: |
+        # 读取上次版本号 +1
+        LAST_VERSION=$(git tag --list 'v*' --sort=-version:refname | head -n1 | sed 's/v//')
+        if [[ -z "$LAST_VERSION" ]]; then
+          NEXT_VERSION="1.0.0"
+        else
+          # 语义化版本递增
+          IFS='.' read -r MAJOR MINOR PATCH <<< "$LAST_VERSION"
+          NEXT_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
+        fi
+        echo "version=v$NEXT_VERSION" >> $GITHUB_OUTPUT
+        echo "Next version: v$NEXT_VERSION"
         
     - name: Create ZIP
       run: |
-        zip -r "bookmark-sorter-v${{ steps.version.outputs.version }}.zip" . \
+        zip -r "bookmark-sorter-${{ steps.version.outputs.version }}.zip" . \
         -x "*.git*" ".github/*" "README.md" ".gitignore" "builds/*"
         
     - name: Create Release & Upload
       uses: softprops/action-gh-release@v2
       with:
-        tag_name: v${{ steps.version.outputs.version }}
-        name: "🔥 Bookmark Sorter v${{ steps.version.outputs.version }}"
+        tag_name: ${{ steps.version.outputs.version }}
+        name: "🔥 Bookmark Sorter ${{ steps.version.outputs.version }}"
         body: |
+          # 🔥 Bookmark Sorter ${{ steps.version.outputs.version }}
 
           ## ✨ 核心功能
           - ✅ **递归排序**所有子文件夹  
@@ -43,6 +55,6 @@ jobs:
           **⭐ 喜欢请点 Star 支持！**
         draft: false
         prerelease: false
-        files: bookmark-sorter-v${{ steps.version.outputs.version }}.zip
+        files: bookmark-sorter-${{ steps.version.outputs.version }}.zip
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
