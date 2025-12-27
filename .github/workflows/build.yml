@@ -1,0 +1,42 @@
+name: Build Chrome Extension
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  release:
+    types: [ published ]
+  workflow_dispatch: 
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Create build directory
+      run: mkdir builds
+      
+    - name: Zip extension for Chrome
+      run: |
+        zip -r builds/bookmark-sorter-${{ github.sha }}.zip . -x "*.git*" "builds/*"
+        
+    - name: Upload ZIP artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: bookmark-sorter-${{ github.sha }}
+        path: builds/*.zip
+        
+    - name: Upload to Release (if release)
+      if: github.event_name == 'release'
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ github.event.release.upload_url }}
+        asset_path: ./builds/bookmark-sorter-${{ github.sha }}.zip
+        asset_name: bookmark-sorter-v${{ github.event.release.tag_name }}.zip
+        asset_content_type: application/zip
