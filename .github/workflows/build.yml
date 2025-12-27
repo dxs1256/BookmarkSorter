@@ -37,7 +37,6 @@ jobs:
         tag_name: ${{ steps.version.outputs.version }}
         name: "🔥 Bookmark Sorter ${{ steps.version.outputs.version }}"
         body: |
-          # 🔥 Bookmark Sorter ${{ steps.version.outputs.version }}
 
           ## ✨ 核心功能
           - ✅ **递归排序**所有子文件夹  
