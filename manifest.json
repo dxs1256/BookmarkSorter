@@ -1,7 +1,7 @@
 {
   "name": "按视觉长度整理书签",
-  "description": "按文本视觉长度排序当前书签文件夹，短的在前，文件夹排在最后。",
-  "version": "1.0.0",
+  "description": "右键任意页面，按视觉长度排序书签文件夹",
+  "version": "1.0",
   "manifest_version": 3,
   "permissions": [
     "bookmarks",
@@ -9,5 +9,8 @@
   ],
   "background": {
     "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "打开书签排序面板"
   }
 }
