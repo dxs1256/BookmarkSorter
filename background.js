@@ -17,13 +17,11 @@ async function sortFolderByVisualLength(folderId, folderName) {
   
   const children = await chrome.bookmarks.getChildren(folderId);
   
-  // 分离书签和文件夹
   const bookmarks = [];
   const folders = [];
 
   for (const node of children) {
     if (node.url) {
-      // 书签
       const title = node.title || node.url || "";
       bookmarks.push({
         id: node.id,
@@ -31,21 +29,17 @@ async function sortFolderByVisualLength(folderId, folderName) {
         vlen: visualLength(title)
       });
     } else if (node.children) {
-      // 文件夹
       folders.push(node);
     }
   }
 
-  // 书签按视觉长度排序（短的在前）
   bookmarks.sort((a, b) => {
     if (a.vlen !== b.vlen) return a.vlen - b.vlen;
     return a.title.localeCompare(b.title);
   });
 
-  // 文件夹按名称排序
   folders.sort((a, b) => (a.title || "").localeCompare(b.title || ""));
 
-  // 执行移动：书签在前，文件夹在后
   let index = 0;
   for (const bm of bookmarks) {
     await chrome.bookmarks.move(bm.id, { 
@@ -62,12 +56,6 @@ async function sortFolderByVisualLength(folderId, folderName) {
   
   console.log(`完成！书签${bookmarks.length}个，文件夹${folders.length}个`);
 }
-
-// 常用文件夹ID
-const FOLDERS = {
-  "书签栏": "1",
-  "其他书签": "2"
-};
 
 // 创建右键菜单
 chrome.runtime.onInstalled.addListener(() => {
@@ -98,39 +86,5 @@ chrome.contextMenus.onClicked.addListener(async (info) => {
     }
   } catch (error) {
     console.error("排序失败:", error);
-  }
-});
-
-// 扩展图标点击：显示常用文件夹列表
-chrome.action.onClicked.addListener(async () => {
-  chrome.action.setPopup({
-    popup: `
-      <!DOCTYPE html>
-      <html>
-      <head><meta charset="utf-8"></head>
-      <body style="width:200px;padding:10px;">
-        <h3>选择排序文件夹</h3>
-        <button id="sort1" style="width:100%;margin:5px 0;">📋 书签栏</button>
-        <button id="sort2" style="width:100%;margin:5px 0;">📂 其他书签</button>
-        <script>
-          document.getElementById('sort1').onclick = () => {
-            chrome.runtime.sendMessage({action: 'sort', folder: '1'});
-            window.close();
-          };
-          document.getElementById('sort2').onclick = () => {
-            chrome.runtime.sendMessage({action: 'sort', folder: '2'});
-            window.close();
-          };
-        </script>
-      </body>
-      </html>
-    `
-  });
-});
-
-// 处理popup消息
-chrome.runtime.onMessage.addListener((request) => {
-  if (request.action === 'sort') {
-    sortFolderByVisualLength(request.folder, request.folder === '1' ? '书签栏' : '其他书签');
   }
 });
