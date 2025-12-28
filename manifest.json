@@ -5,12 +5,18 @@
   "permissions": ["bookmarks", "contextMenus"],
   "background": { "service_worker": "background.js" },
   "action": {
-    "default_title": "一键排序书签"
+    "default_title": "一键排序书签",
+    "default_icon": {           // ✅ 加这行！
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png", 
+      "128": "icons/icon128.png"
+    }
   },
   "icons": {
-    "16": "icons/icon16.ico",
-    "32": "icons/icon32.ico",
-    "48": "icons/icon48.ico",
-    "128": "icons/icon128.ico"
+    "16": "icons/icon16.png",   // ✅ 改PNG
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
   }
 }
