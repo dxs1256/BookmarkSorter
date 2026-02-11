@@ -1,20 +1,21 @@
 {
   "manifest_version": 3,
-  "name": "视觉书签排序器",
-  "version": "2.0",
-  "permissions": ["bookmarks", "contextMenus"],
-  "background": { "service_worker": "background.js" },
+  "name": "视觉书签排序器 Pro",
+  "version": "2.1",
+  "description": "按标题视觉长度自动排序书签（短在前，长在后）",
+  "permissions": [
+    "bookmarks",
+    "contextMenus",
+    "notifications"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "action": {
-    "default_title": "一键排序书签",
-    "default_icon": {           // ✅ 加这行！
-      "16": "icons/icon16.png",
-      "32": "icons/icon32.png",
-      "48": "icons/icon48.png", 
-      "128": "icons/icon128.png"
-    }
+    "default_title": "一键排序全部书签"
   },
   "icons": {
-    "16": "icons/icon16.png",   // ✅ 改PNG
+    "16": "icons/icon16.png",
     "32": "icons/icon32.png",
     "48": "icons/icon48.png",
     "128": "icons/icon128.png"
