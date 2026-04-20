@@ -5,8 +5,8 @@ function visualLength(str) {
   const clean = (str || "").trim();
   let len = 0;
   for (const ch of clean) {
-    // 简单判断：非单字节字符逻辑
-    len += (ch.charCodeAt(0) <= 0x007f) ? 1 : 2;
+    const code = ch.charCodeAt(0);
+    len += (code <= 0x7F) ? 1 : 2;
   }
   return len;
 }
@@ -33,12 +33,11 @@ async function sortFolderRecursive(folderId, folderName, depth = 0) {
 
   if (!children || children.length === 0) return;
 
-  console.log(`${indent}📂 正在整理: ${folderName} (${children.length} 个项目)`);
+  console.log(`${indent}[SORT] 正在整理: ${folderName} (${children.length} 个项目)`);
 
   const bookmarks = [];
   const folders = [];
 
-  // 1. 分类
   for (const node of children) {
     if (node.url) {
       const title = (node.title || node.url || "").trim();
@@ -48,32 +47,39 @@ async function sortFolderRecursive(folderId, folderName, depth = 0) {
     }
   }
 
-  // 2. 排序逻辑
-  // 书签：视觉长度从小到大，相同长度按字母序
   bookmarks.sort((a, b) => {
     if (a.vlen !== b.vlen) return a.vlen - b.vlen;
     return a.title.localeCompare(b.title, 'zh-CN');
   });
 
-  // 文件夹：按字母序
   folders.sort((a, b) => a.title.localeCompare(b.title, 'zh-CN'));
 
-  // 3. 最终期望顺序：书签在前，文件夹在后
   const sortedList = [...bookmarks, ...folders];
 
-  // 4. 执行移动 (优化：如果位置没变，不调用 API)
   for (let i = 0; i < sortedList.length; i++) {
     const item = sortedList[i];
-    // 注意：这里的 index 比较是关键，减少不必要的 move 操作
-    // 因为 move 是异步的，且会改变兄弟节点的 index，所以顺序执行是安全的
     if (item.index !== i) {
-      await chrome.bookmarks.move(item.id, { index: i });
+      await moveWithRetry(item.id, { index: i });
     }
   }
 
-  // 5. 递归处理子文件夹
   for (const f of folders) {
     await sortFolderRecursive(f.id, f.title, depth + 1);
+  }
+}
+
+/**
+ * 带重试的 move 操作
+ */
+async function moveWithRetry(id, destination, maxRetries = 3) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      await chrome.bookmarks.move(id, destination);
+      return;
+    } catch (err) {
+      if (attempt === maxRetries) throw err;
+      await new Promise(resolve => setTimeout(resolve, 100 * attempt));
+    }
   }
 }
 
@@ -107,9 +113,9 @@ async function startSorting(rootId = null) {
 // 1. 安装时创建右键菜单
 chrome.runtime.onInstalled.addListener(() => {
   const menus = [
-    { id: "sort_all", title: "🌍 递归排序：所有书签" },
-    { id: "sort_bar", title: "📋 递归排序：书签栏" },
-    { id: "sort_other", title: "📂 递归排序：其他书签" }
+    { id: "sort_all", title: "[全部] 递归排序所有书签" },
+    { id: "sort_bar", title: "[书签栏] 递归排序" },
+    { id: "sort_other", title: "[其他] 递归排序" }
   ];
 
   menus.forEach(menu => {
