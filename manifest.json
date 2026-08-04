@@ -6,7 +6,8 @@
   "permissions": [
     "bookmarks",
     "contextMenus",
-    "notifications"
+    "notifications",
+    "storage"
   ],
   "background": {
     "service_worker": "background.js"
