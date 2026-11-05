@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "视觉书签排序器 Pro",
-  "version": "2.2.0",
+  "version": "2.3.0",
   "description": "按标题视觉长度、标题、域名或添加时间自动排序书签，策略可配置。",
   "permissions": [
     "bookmarks",
