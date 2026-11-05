@@ -2,58 +2,152 @@ name: Build & Release Chrome Extension
 
 on:
   workflow_dispatch:
+    inputs:
+      bump:
+        description: "版本递增规则"
+        type: choice
+        options: [patch, minor, major]
+        default: patch
+      dry_run:
+        description: "仅构建，不创建 Release"
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   build:
     runs-on: ubuntu-latest
-    
+
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
-      
-    - name: Get next version
-      id: version
-      run: |
-        # 读取上次版本号 +1
-        LAST_VERSION=$(git tag --list 'v*' --sort=-version:refname | head -n1 | sed 's/v//')
-        if [[ -z "$LAST_VERSION" ]]; then
-          NEXT_VERSION="1.0.0"
-        else
-          # 语义化版本递增
-          IFS='.' read -r MAJOR MINOR PATCH <<< "$LAST_VERSION"
-          NEXT_VERSION="${MAJOR}.${MINOR}.$((PATCH + 1))"
-        fi
-        echo "version=v$NEXT_VERSION" >> $GITHUB_OUTPUT
-        echo "Next version: v$NEXT_VERSION"
-        
-    - name: Create ZIP
-      run: |
-        zip -r "bookmark-sorter-${{ steps.version.outputs.version }}.zip" . \
-        -x "*.git*" ".github/*" "README.md" ".gitignore" "builds/*"
-        
-    - name: Create Release & Upload
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: ${{ steps.version.outputs.version }}
-        name: "🔥 Bookmark Sorter ${{ steps.version.outputs.version }}"
-        body: |
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
 
-          ## ✨ 核心功能
-          - ✅ **递归排序**所有子文件夹  
-          - ✅ **视觉长度排序**（汉字×2，英文×1，短的在前）  
-          - ✅ **书签在前**，文件夹在后  
-          - ✅ **双触发方式**：右键菜单 + 图标点击  
+      - name: Bump version
+        id: version
+        run: |
+          set -euo pipefail
 
-          ## 📦 安装步骤
-          1. 下载 → 解压  
-          2. `chrome://extensions/` → 开发者模式  
-          3. **加载已解压的扩展程序** → 选择文件夹  
-          4. 任意页面**右键 → 全部书签递归排序**
+          # 单一事实源：manifest.json 的 version 字段。
+          # 旧脚本用 `git tag --sort=-version:refname` 推算，仓库里存在
+          # v20251227-<sha> 这类 tag 时会把它们排到最前，导致版本号算错。
+          CURRENT=$(jq -r '.version' manifest.json)
 
-          ---
-          **⭐ 喜欢请点 Star 支持！**
-        draft: false
-        prerelease: false
-        files: bookmark-sorter-${{ steps.version.outputs.version }}.zip
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Chrome 版本号必须是 1~4 段数字，这里强校验，避免脏数据流进发布
+          if ! [[ "$CURRENT" =~ ^[0-9]+(\.[0-9]+){0,3}$ ]]; then
+            echo "::error::manifest.json 的 version 非法：$CURRENT"
+            exit 1
+          fi
+
+          IFS='.' read -r -a PARTS <<< "$CURRENT"
+          while [ "${#PARTS[@]}" -lt 3 ]; do PARTS+=("0"); done
+
+          MAJOR=${PARTS[0]}
+          MINOR=${PARTS[1]}
+          PATCH=${PARTS[2]}
+
+          case "${{ inputs.bump }}" in
+            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
+            *)     PATCH=$((PATCH + 1)) ;;
+          esac
+
+          NEXT="${MAJOR}.${MINOR}.${PATCH}"
+          jq --arg v "$NEXT" '.version = $v' manifest.json > manifest.tmp
+          mv manifest.tmp manifest.json
+
+          echo "version=$NEXT" >> "$GITHUB_OUTPUT"
+          echo "previous=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "发布版本：$CURRENT -> $NEXT"
+
+      - name: Verify manifest
+        run: |
+          set -euo pipefail
+          jq empty manifest.json
+          # 设置页与背景脚本必须真实存在，否则装上是坏的
+          jq -e '.options_ui.page' manifest.json > /dev/null
+          for f in background.js options.html options.js; do
+            [ -f "$f" ] || { echo "::error::缺少文件 $f"; exit 1; }
+          done
+          for size in 16 32 48 128; do
+            [ -f "icons/icon${size}.png" ] || { echo "::error::缺少图标 icons/icon${size}.png"; exit 1; }
+          done
+
+      - name: Package
+        run: |
+          set -euo pipefail
+          ARCHIVE="bookmark-sorter-v${{ steps.version.outputs.version }}.zip"
+
+          # README 以「使用说明.md」的形式保留在压缩包里，用户解压即可看到
+          if [ -f README.md ]; then
+            cp README.md "使用说明.md"
+          fi
+
+          zip -r "$ARCHIVE" . \
+            -x "*.git*" ".github/*" "*.zip" "builds/*" "node_modules/*" "test/*" \
+               ".gitignore" "README.md" "CHANGELOG.md" "LICENSE"
+
+          echo "ARCHIVE=$ARCHIVE" >> "$GITHUB_ENV"
+          unzip -l "$ARCHIVE"
+          # 装上去必须能用：清单里的入口文件都要在包里
+          for f in manifest.json background.js options.html options.js; do
+            unzip -l "$ARCHIVE" "$f" > /dev/null || { echo "::error::压缩包缺少 $f"; exit 1; }
+          done
+
+      - name: Commit version bump
+        if: ${{ !inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add manifest.json
+          if git diff --cached --quiet; then
+            echo "版本号无变化，跳过提交"
+          else
+            git commit -m "chore(release): v${{ steps.version.outputs.version }}"
+            git push
+          fi
+
+      - name: Create Release
+        if: ${{ !inputs.dry_run }}
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ steps.version.outputs.version }}
+          name: "🔥 Bookmark Sorter v${{ steps.version.outputs.version }}"
+          make_latest: true
+          files: ${{ env.ARCHIVE }}
+          body: |
+            ## ✨ 核心功能
+            - ✅ **递归排序**所有子文件夹
+            - ✅ **多种排序依据**：视觉长度 / 标题 / 域名 / 添加时间，方向可选
+            - ✅ **书签与文件夹**可分块或混排，文件夹可在前也可在后
+            - ✅ **设置页**随时调整策略（扩展详情 → 扩展程序选项）
+
+            ## 📦 安装步骤
+            1. 下载 `bookmark-sorter-v${{ steps.version.outputs.version }}.zip` → 解压
+            2. 打开 `chrome://extensions/` → 开启开发者模式
+            3. **加载已解压的扩展程序** → 选择解压后的文件夹
+            4. 任意页面**右键 → 全部书签递归排序**
+
+            ## 🔒 隐私
+            书签数据全部在本地处理，不联网、不上传、不收集任何信息。
+
+            ---
+            **⭐ 喜欢请点 Star 支持！**
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifact
+        if: ${{ inputs.dry_run }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: bookmark-sorter-v${{ steps.version.outputs.version }}
+          path: ${{ env.ARCHIVE }}
