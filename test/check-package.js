@@ -62,7 +62,10 @@ check(
   "不再用 git tag 推算版本（旧 bug）",
   !/tag --list/.test(yml)
 );
-check("有 dry_run 入口", /dry_run/.test(yml));
+// 只要点一下 Run workflow 就跑完，不再有下拉选项需要选
+check("没有 bump 之类的必填选项", !/inputs\.bump/.test(yml) && !/^\s+bump:/m.test(yml));
+check("没有 dry_run 之类的开关", !/dry_run/.test(yml));
+check("版本号自动 +1", /PATCH \+ 1/.test(yml));
 check("有版本号强校验", /version 非法/.test(yml));
 check("有打包后完整性校验", /压缩包缺少/.test(yml));
 check("声明了 contents: write 权限", /contents:\s*write/.test(yml));

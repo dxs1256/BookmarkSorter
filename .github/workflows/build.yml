@@ -2,21 +2,6 @@ name: Build & Release Chrome Extension
 
 on:
   workflow_dispatch:
-    inputs:
-      bump:
-        description: "版本递增规则（2.2.0 为例：补丁→2.2.1，功能→2.3.0，重大→3.0.0）"
-        type: choice
-        # 选项值会传进下面的脚本，用中文便于阅读；
-        # 脚本里同时兼容 patch/minor/major 的英文写法，方便 API 调用。
-        options:
-          - 修订补丁（只修 bug）
-          - 功能更新（加新功能）
-          - 重大版本（不兼容改动）
-        default: 修订补丁（只修 bug）
-      dry_run:
-        description: "只构建不发布（勾选后不会创建 Release）"
-        type: boolean
-        default: false
 
 permissions:
   contents: write
@@ -59,19 +44,11 @@ jobs:
           MINOR=${PARTS[1]}
           PATCH=${PARTS[2]}
 
-          # 中文选项按关键字匹配，同时兼容英文 patch/minor/major
-          BUMP="${{ inputs.bump }}"
-          case "$BUMP" in
-            重大版本*|major)                 MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
-            功能更新*|minor)                 MINOR=$((MINOR + 1)); PATCH=0 ;;
-            修订补丁*|patch|"")              PATCH=$((PATCH + 1)) ;;
-            *)
-              echo "::error::无法识别的版本递增规则：$BUMP"
-              exit 1
-              ;;
-          esac
+          # 点一下就跑，版本号自动 +1，不做任何询问。
+          # 想发大版本（1.x -> 2.0.0）时，直接改 manifest.json 的 version
+          # 再点运行即可，脚本会以它为基础继续递增。
+          NEXT="${MAJOR}.${MINOR}.$((PATCH + 1))"
 
-          NEXT="${MAJOR}.${MINOR}.${PATCH}"
           jq --arg v "$NEXT" '.version = $v' manifest.json > manifest.tmp
           mv manifest.tmp manifest.json
 
@@ -114,7 +91,6 @@ jobs:
           done
 
       - name: Commit version bump
-        if: ${{ !inputs.dry_run }}
         run: |
           set -euo pipefail
           git config user.name  "github-actions[bot]"
@@ -128,7 +104,6 @@ jobs:
           fi
 
       - name: Create Release
-        if: ${{ !inputs.dry_run }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.version.outputs.version }}
@@ -155,10 +130,3 @@ jobs:
             **⭐ 喜欢请点 Star 支持！**
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload artifact
-        if: ${{ inputs.dry_run }}
-        uses: actions/upload-artifact@v4
-        with:
-          name: bookmark-sorter-v${{ steps.version.outputs.version }}
-          path: ${{ env.ARCHIVE }}
