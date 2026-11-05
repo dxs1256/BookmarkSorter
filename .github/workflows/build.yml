@@ -4,12 +4,17 @@ on:
   workflow_dispatch:
     inputs:
       bump:
-        description: "版本递增规则"
+        description: "版本递增规则（2.2.0 为例：补丁→2.2.1，功能→2.3.0，重大→3.0.0）"
         type: choice
-        options: [patch, minor, major]
-        default: patch
+        # 选项值会传进下面的脚本，用中文便于阅读；
+        # 脚本里同时兼容 patch/minor/major 的英文写法，方便 API 调用。
+        options:
+          - 修订补丁（只修 bug）
+          - 功能更新（加新功能）
+          - 重大版本（不兼容改动）
+        default: 修订补丁（只修 bug）
       dry_run:
-        description: "仅构建，不创建 Release"
+        description: "只构建不发布（勾选后不会创建 Release）"
         type: boolean
         default: false
 
@@ -54,10 +59,16 @@ jobs:
           MINOR=${PARTS[1]}
           PATCH=${PARTS[2]}
 
-          case "${{ inputs.bump }}" in
-            major) MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
-            minor) MINOR=$((MINOR + 1)); PATCH=0 ;;
-            *)     PATCH=$((PATCH + 1)) ;;
+          # 中文选项按关键字匹配，同时兼容英文 patch/minor/major
+          BUMP="${{ inputs.bump }}"
+          case "$BUMP" in
+            重大版本*|major)                 MAJOR=$((MAJOR + 1)); MINOR=0; PATCH=0 ;;
+            功能更新*|minor)                 MINOR=$((MINOR + 1)); PATCH=0 ;;
+            修订补丁*|patch|"")              PATCH=$((PATCH + 1)) ;;
+            *)
+              echo "::error::无法识别的版本递增规则：$BUMP"
+              exit 1
+              ;;
           esac
 
           NEXT="${MAJOR}.${MINOR}.${PATCH}"
