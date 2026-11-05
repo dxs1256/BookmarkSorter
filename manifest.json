@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "视觉书签排序器 Pro",
-  "version": "2.1",
-  "description": "按标题视觉长度自动排序书签（短在前，长在后）",
+  "version": "2.2.0",
+  "description": "按标题视觉长度、标题、域名或添加时间自动排序书签，策略可配置。",
   "permissions": [
     "bookmarks",
     "contextMenus",
@@ -12,8 +12,18 @@
   "background": {
     "service_worker": "background.js"
   },
+  "options_ui": {
+    "page": "options.html",
+    "open_in_tab": true
+  },
   "action": {
-    "default_title": "一键排序全部书签"
+    "default_title": "一键排序全部书签",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png",
+      "48": "icons/icon48.png",
+      "128": "icons/icon128.png"
+    }
   },
   "icons": {
     "16": "icons/icon16.png",

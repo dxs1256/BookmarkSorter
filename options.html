@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <title>视觉书签排序器 · 设置</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #ffffff;
+      --fg: #1f2328;
+      --muted: #6b7280;
+      --line: #e5e7eb;
+      --accent: #2563eb;
+      --card: #fafafa;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #1c1f24;
+        --fg: #e5e7eb;
+        --muted: #9aa4b2;
+        --line: #333a42;
+        --accent: #6ea8fe;
+        --card: #24282e;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 28px 20px 40px;
+      font: 14px/1.6 system-ui, "Microsoft YaHei", sans-serif;
+      background: var(--bg);
+      color: var(--fg);
+    }
+    .wrap { max-width: 640px; margin: 0 auto; }
+    h1 { font-size: 18px; margin: 0 0 4px; }
+    .sub { color: var(--muted); font-size: 12px; margin-bottom: 22px; }
+    fieldset {
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      padding: 16px 18px;
+      margin: 0 0 16px;
+      background: var(--card);
+    }
+    legend { font-size: 12px; color: var(--muted); padding: 0 6px; }
+    .row {
+      display: grid;
+      grid-template-columns: 150px 1fr;
+      gap: 12px;
+      align-items: center;
+      padding: 8px 0;
+    }
+    .row + .row { border-top: 1px dashed var(--line); }
+    .row label.hint { display: block; color: var(--muted); font-size: 12px; }
+    select {
+      width: 100%;
+      padding: 7px 9px;
+      border-radius: 7px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      color: var(--fg);
+      font: inherit;
+    }
+    .check { display: flex; align-items: center; gap: 8px; }
+    .check input { width: 15px; height: 15px; accent-color: var(--accent); }
+    .actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 18px; }
+    button {
+      padding: 9px 16px;
+      border-radius: 8px;
+      border: 1px solid var(--line);
+      background: var(--bg);
+      color: var(--fg);
+      font: inherit;
+      cursor: pointer;
+    }
+    button:hover { border-color: var(--accent); color: var(--accent); }
+    button.primary {
+      background: var(--accent);
+      border-color: var(--accent);
+      color: #fff;
+    }
+    button.primary:hover { opacity: .9; color: #fff; }
+    button.danger:hover { border-color: #dc2626; color: #dc2626; }
+    #status {
+      margin-top: 16px;
+      min-height: 22px;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    #status.ok { color: #16a34a; }
+    #status.err { color: #dc2626; }
+    .foot { margin-top: 22px; font-size: 12px; color: var(--muted); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <h1>视觉书签排序器 Pro</h1>
+    <div class="sub">所有处理都在本地完成，书签数据不会离开你的电脑。</div>
+
+    <form id="form">
+      <fieldset>
+        <legend>排序方式</legend>
+
+        <div class="row">
+          <label for="mode">排序依据</label>
+          <select id="mode">
+            <option value="visual">视觉长度（汉字算 2，短的在前）</option>
+            <option value="title">标题字典序（支持数字自然排序）</option>
+            <option value="domain">网站域名</option>
+            <option value="date">添加时间</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <label for="direction">排序方向</label>
+          <select id="direction">
+            <option value="asc">升序（短/早/字母序在前）</option>
+            <option value="desc">降序（长/新/倒序在前）</option>
+          </select>
+        </div>
+
+        <div class="row">
+          <label for="groupStrategy">书签与文件夹</label>
+          <select id="groupStrategy">
+            <option value="separate">分成两块（书签区 + 文件夹区）</option>
+            <option value="inline">混合排序</option>
+          </select>
+        </div>
+
+        <div class="row" id="folderFirstRow">
+          <label>文件夹位置</label>
+          <div class="check">
+            <input type="checkbox" id="folderFirst">
+            <label for="folderFirst">文件夹排在书签前面</label>
+          </div>
+        </div>
+
+        <div class="row">
+          <label>子文件夹</label>
+          <div class="check">
+            <input type="checkbox" id="recursive">
+            <label for="recursive">递归处理所有子文件夹</label>
+          </div>
+        </div>
+      </fieldset>
+
+      <div class="actions">
+        <button type="submit" class="primary">保存设置</button>
+        <button type="button" id="btnSort">立即排序全部书签</button>
+        <button type="button" id="btnRestore">撤销上次排序</button>
+        <button type="button" id="btnClear" class="danger">清空历史快照</button>
+      </div>
+    </form>
+
+    <div id="status"></div>
+
+    <div class="foot">
+      当前可撤销次数：<span id="snapCount">0</span>（最多保留 5 次）
+    </div>
+  </div>
+  <script src="options.js"></script>
+</body>
+</html>
